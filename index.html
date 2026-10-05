@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0b0b0c">
+  <meta name="description" content="#むんきフォトコン の作品を気軽に見られるフォトギャラリー。">
+  <title>むんきちゃんフォトコン — Photo Gallery</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="#" data-action="home" aria-label="ギャラリーの先頭へ">
+      <span class="brand-kicker">PHOTO GALLERY</span>
+      <span class="brand-title">むんきちゃんフォトコン</span>
+    </a>
+    <nav class="nav-tabs" aria-label="表示切り替え">
+      <button class="nav-tab is-active" data-view="gallery">ギャラリー</button>
+      <button class="nav-tab" data-view="focus">1枚ずつ</button>
+      <button class="nav-tab" data-view="favorites">保存済み <span id="favoriteCount" class="nav-count">0</span></button>
+    </nav>
+    <button id="shuffleButton" class="icon-button" type="button" aria-label="作品をシャッフル" title="シャッフル">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 3h5v5M4 7h3.4c1.3 0 2.5.6 3.2 1.6l5 6.8c.7 1 1.9 1.6 3.2 1.6H21M16 21h5v-5M4 17h3.4c1.3 0 2.5-.6 3.2-1.6l1.1-1.5"/></svg>
+    </button>
+  </header>
+
+  <main>
+    <section class="hero" aria-labelledby="pageTitle">
+      <div>
+        <p class="eyebrow" id="periodText">#むんきフォトコン</p>
+        <h1 id="pageTitle">みんなの、むんきちゃん。</h1>
+        <p class="hero-copy">作品を眺めて、気になった写真は保存。元のX投稿へそのまま見に行けます。</p>
+      </div>
+      <p id="galleryStats" class="hero-stats"></p>
+    </section>
+
+    <section id="galleryView" class="view is-active" aria-label="作品ギャラリー">
+      <div id="galleryGrid" class="masonry"></div>
+    </section>
+
+    <section id="focusView" class="view" aria-label="1作品ずつ見る">
+      <div id="focusMount"></div>
+    </section>
+
+    <section id="favoritesView" class="view" aria-label="保存した作品">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">BOOKMARKS</p>
+          <h2>保存した作品</h2>
+        </div>
+        <p class="section-note">このブラウザ内にだけ保存されます。</p>
+      </div>
+      <div id="favoritesGrid" class="masonry"></div>
+      <div id="favoritesEmpty" class="empty-state" hidden>
+        <span class="empty-heart">♡</span>
+        <h3>まだ保存した作品はありません</h3>
+        <p>作品右上の♡を押すと、ここから見返せます。</p>
+        <button class="text-button" data-view="gallery">ギャラリーを見る</button>
+      </div>
+    </section>
+  </main>
+
+  <div id="viewer" class="viewer" hidden aria-hidden="true">
+    <div class="viewer-backdrop" data-action="close-viewer"></div>
+    <section class="viewer-panel" role="dialog" aria-modal="true" aria-label="作品を表示">
+      <button class="viewer-close" type="button" data-action="close-viewer" aria-label="閉じる">×</button>
+      <div class="viewer-media-wrap">
+        <button class="media-arrow media-arrow-left" id="viewerImagePrev" type="button" aria-label="前の画像">‹</button>
+        <img id="viewerImage" class="viewer-image" src="" alt="">
+        <button class="media-arrow media-arrow-right" id="viewerImageNext" type="button" aria-label="次の画像">›</button>
+        <span id="viewerImageCount" class="image-count"></span>
+      </div>
+      <aside class="viewer-info">
+        <div class="profile-block">
+          <p id="viewerName" class="profile-name"></p>
+          <p id="viewerUsername" class="profile-username"></p>
+        </div>
+        <div class="viewer-actions">
+          <button id="viewerFavorite" class="save-button" type="button"></button>
+          <a id="viewerTweet" class="x-button" href="#" target="_blank" rel="noopener noreferrer">Xで元投稿を見る ↗</a>
+        </div>
+        <div class="work-nav">
+          <button id="viewerPrevWork" type="button">← 前の作品</button>
+          <button id="viewerNextWork" type="button">次の作品 →</button>
+        </div>
+      </aside>
+    </section>
+  </div>
+
+  <footer>
+    <p>#むんきフォトコン / 2026</p>
+    <p class="footer-note">掲載情報は収集時点のものです。写真の無断転載・再利用を許諾するものではありません。</p>
+  </footer>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
