@@ -144,8 +144,8 @@
     if (!['gallery', 'focus', 'favorites'].includes(view)) return;
     state.view = view;
     document.body.classList.toggle('is-focus-mode', view === 'focus');
-    $('.view').forEach(v => v.classList.toggle('is-active', v.id === `${view}View`));
-    $('.nav-tab').forEach(b => b.classList.toggle('is-active', b.dataset.view === view));
+    $$('.view').forEach(v => v.classList.toggle('is-active', v.id === `${view}View`));
+    $$('.nav-tab').forEach(b => b.classList.toggle('is-active', b.dataset.view === view));
     els.shuffleButton.hidden = view === 'favorites' || view === 'focus';
     if (view === 'favorites') renderFavorites();
     if (view === 'focus') renderFocus();
