@@ -25,6 +25,11 @@
 
   const storageKey = 'munki-photocon:favorites:v1';
 
+  function syncVisualViewport() {
+    const h = window.visualViewport?.height || window.innerHeight;
+    document.documentElement.style.setProperty('--visual-viewport-h', `${Math.round(h)}px`);
+  }
+
   function loadFavorites() {
     try {
       const raw = JSON.parse(localStorage.getItem(storageKey) || '[]');
@@ -145,6 +150,9 @@
 
   function setView(view) {
     if (!['gallery', 'focus', 'favorites'].includes(view)) return;
+
+    // iOS Safariの実際に見えている高さを先に反映してから表示を切り替える。
+    syncVisualViewport();
 
     // どの位置から切り替えても、固定表示の1枚ずつモードが上端から始まるようにする。
     window.scrollTo(0, 0);
@@ -337,6 +345,11 @@
       if (id && state.works.some(w => w.id === id)) openViewerById(id, false);
       else if (!id && !els.viewer.hidden) closeViewer(false);
     });
+
+    window.addEventListener('resize', syncVisualViewport, { passive: true });
+    window.addEventListener('orientationchange', () => setTimeout(syncVisualViewport, 50), { passive: true });
+    window.visualViewport?.addEventListener('resize', syncVisualViewport, { passive: true });
+    window.visualViewport?.addEventListener('scroll', syncVisualViewport, { passive: true });
   }
 
   async function init() {
@@ -362,6 +375,7 @@
       viewerNextWork: $('#viewerNextWork'),
     });
 
+    syncVisualViewport();
     loadFavorites();
     const res = await fetch('data/gallery.json', {cache:'no-cache'});
     if (!res.ok) throw new Error(`gallery.json: ${res.status}`);
