@@ -173,21 +173,71 @@ footer p { margin: 0; }
   .card-overlay { display: none; }
   .section-heading { display: block; padding: 4px 4px 22px; }
   .section-note { margin-top: 10px; }
-  body.is-focus-mode main { width: 100%; }
+  body.is-focus-mode main {
+    width: 100%;
+    height: calc(100dvh - 60px);
+    height: calc(100svh - 60px);
+  }
+  body.is-focus-mode #focusView,
+  body.is-focus-mode #focusMount,
+  body.is-focus-mode .focus-shell { height: 100%; min-height: 0; }
   body.is-focus-mode #focusMount { padding: 0; }
-  body.is-focus-mode .site-header { padding: 0 10px; border-bottom-color: rgba(255,255,255,.08); }
+  body.is-focus-mode .site-header {
+    height: 60px;
+    padding: 0 10px;
+    border-bottom-color: rgba(255,255,255,.08);
+  }
   body.is-focus-mode .nav-tabs { width: 100%; max-width: 520px; }
   .focus-shell { width: 100%; }
-  .focus-card { border-radius: 0; border-left: 0; border-right: 0; border-bottom: 0; box-shadow: none; }
-  .focus-meta { min-height: 72px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); gap: 10px; }
-  .focus-profile { flex: 1 1 auto; }
+  body.is-focus-mode .focus-card {
+    height: 100%;
+    border-radius: 0;
+    border-left: 0;
+    border-right: 0;
+    border-bottom: 0;
+    box-shadow: none;
+    display: grid;
+    grid-template-rows: auto minmax(0,1fr);
+    grid-template-columns: minmax(0,1fr);
+    overflow: hidden;
+  }
+  body.is-focus-mode .focus-meta {
+    grid-row: 1;
+    grid-column: 1;
+    min-height: 64px;
+    padding: 8px 10px;
+    gap: 8px;
+    border-bottom: 1px solid var(--line);
+    background: rgba(18,18,20,.98);
+    z-index: 3;
+  }
+  body.is-focus-mode .focus-media {
+    grid-row: 2;
+    grid-column: 1;
+    min-height: 0;
+    height: 100%;
+    width: 100%;
+  }
+  body.is-focus-mode .focus-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+  .focus-profile { flex: 1 1 auto; min-width: 0; }
   .focus-name { font-size: 14px; }
   .focus-user { font-size: 11px; }
-  .focus-actions { gap: 6px; }
-  .round-action { width: 40px; height: 40px; }
-  .focus-x { min-height: 40px; padding: 0 11px; font-size: 11px; }
-  .focus-position { bottom: 9px; }
-  .focus-post-count { right: 9px; bottom: 9px; }
+  .focus-actions { gap: 6px; flex: 0 0 auto; }
+  .round-action { width: 38px; height: 38px; }
+  .focus-x { min-height: 38px; padding: 0 10px; font-size: 10.5px; }
+  .focus-position {
+    top: 9px;
+    bottom: auto;
+  }
+  .focus-post-count {
+    top: 9px;
+    right: 9px;
+    bottom: auto;
+  }
   .focus-edge-hint { width: 32px; height: 48px; font-size: 27px; background: rgba(0,0,0,.10); }
   .focus-edge-hint-left { left: 3px; }
   .focus-edge-hint-right { right: 3px; }
