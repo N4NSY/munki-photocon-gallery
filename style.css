@@ -111,16 +111,13 @@ body.is-focus-mode .site-header {
   position: fixed;
   inset: 0 0 auto 0;
   width: 100%;
-  height: 64px;
-  grid-template-columns: 1fr;
-  grid-template-rows: 1fr;
-  padding: 0 16px;
+  height: var(--header-h);
 }
-body.is-focus-mode .brand, body.is-focus-mode .icon-button { display: none !important; }
-body.is-focus-mode .nav-tabs { grid-column: 1; grid-row: 1; justify-self: center; }
+body.is-focus-mode .brand { display: flex; }
+body.is-focus-mode .icon-button { display: none !important; }
 body.is-focus-mode main {
   position: fixed;
-  inset: 64px 0 0 0;
+  inset: var(--header-h) 0 0 0;
   width: 100%;
   height: auto;
   margin: 0;
@@ -171,8 +168,8 @@ footer p { margin: 0; }
   .viewer-actions { grid-template-columns: 1fr 1.35fr; margin-top: 14px; }
   .work-nav { display: none; }
   .profile-name { font-size: 16px; }
-  body.is-focus-mode .site-header { height: 60px; }
-  body.is-focus-mode main { inset: 60px 0 0 0; height: auto; }
+  body.is-focus-mode .site-header { height: var(--header-h); }
+  body.is-focus-mode main { inset: var(--header-h) 0 0 0; height: auto; }
 }
 
 @media (max-width: 620px) {
@@ -190,7 +187,7 @@ footer p { margin: 0; }
   .section-note { margin-top: 10px; }
   body.is-focus-mode main {
     position: fixed;
-    inset: 60px 0 0 0;
+    inset: var(--header-h) 0 0 0;
     width: 100%;
     height: auto;
     min-height: 0;
@@ -201,11 +198,9 @@ footer p { margin: 0; }
   body.is-focus-mode .focus-shell { height: 100%; min-height: 0; }
   body.is-focus-mode #focusMount { padding: 0; }
   body.is-focus-mode .site-header {
-    height: 60px;
-    padding: 0 10px;
+    height: var(--header-h);
     border-bottom-color: rgba(255,255,255,.08);
   }
-  body.is-focus-mode .nav-tabs { width: 100%; max-width: 520px; }
   .focus-shell { width: 100%; }
   body.is-focus-mode .focus-card {
     height: 100%;
