@@ -9,8 +9,11 @@
     favorites: new Set(),
     viewerIndex: -1,
     viewerImageIndex: 0,
+    focusPhotos: [],
     focusIndex: 0,
-    focusImageIndex: 0,
+    focusTouchStartX: null,
+    focusTouchStartY: null,
+    suppressFocusClickUntil: 0,
   };
 
   const els = {};
@@ -84,16 +87,32 @@
     els.favoritesEmpty.hidden = favorites.length !== 0;
   }
 
-  function focusTemplate(work) {
-    const img = work.images[state.focusImageIndex] || work.images[0];
+  function rebuildFocusPhotos() {
+    state.focusPhotos = state.orderedWorks.flatMap(work =>
+      work.images.map((image, imageIndex) => ({ work, image, imageIndex }))
+    );
+    if (state.focusPhotos.length) {
+      state.focusIndex = ((state.focusIndex % state.focusPhotos.length) + state.focusPhotos.length) % state.focusPhotos.length;
+    } else {
+      state.focusIndex = 0;
+    }
+  }
+
+  function focusTemplate(item) {
+    const { work, image, imageIndex } = item;
     const saved = isSaved(work.id);
-    const count = work.images.length > 1 ? `<span class="focus-count">${state.focusImageIndex + 1} / ${work.images.length}</span>` : '';
+    const postImageCount = work.images.length > 1
+      ? `<span class="focus-post-count">投稿内 ${imageIndex + 1}/${work.images.length}</span>`
+      : '';
     return `
       <div class="focus-shell">
         <article class="focus-card">
-          <div class="focus-media" data-focus-media>
-            <img src="${img.src}" width="${img.webWidth}" height="${img.webHeight}" alt="${escapeHtml(work.displayName)}さんの作品">
-            ${count}
+          <div class="focus-media" data-focus-media role="group" aria-label="画像の左半分で前、右半分で次。左右スワイプでも移動できます">
+            <img src="${image.src}" width="${image.webWidth}" height="${image.webHeight}" draggable="false" alt="${escapeHtml(work.displayName)}さんの作品">
+            <span class="focus-edge-hint focus-edge-hint-left" aria-hidden="true">‹</span>
+            <span class="focus-edge-hint focus-edge-hint-right" aria-hidden="true">›</span>
+            <span class="focus-position">${state.focusIndex + 1} / ${state.focusPhotos.length}</span>
+            ${postImageCount}
           </div>
           <div class="focus-meta">
             <div class="focus-profile">
@@ -102,48 +121,35 @@
             </div>
             <div class="focus-actions">
               <button class="round-action ${saved ? 'is-saved' : ''}" data-favorite-id="${work.id}" type="button" aria-label="${saved ? '保存から外す' : 'この作品を保存'}">${saved ? '♥' : '♡'}</button>
-              <a class="focus-x" href="${work.tweetUrl}" target="_blank" rel="noopener noreferrer">Xで見る ↗</a>
+              <a class="focus-x" href="${work.tweetUrl}" target="_blank" rel="noopener noreferrer">Xで元投稿を見る ↗</a>
             </div>
           </div>
         </article>
-        <div class="focus-controls">
-          <button class="focus-control" data-focus="prev" type="button">← 前</button>
-          <span class="focus-position">${state.focusIndex + 1} / ${state.orderedWorks.length}</span>
-          <button class="focus-control" data-focus="next" type="button">次 →</button>
-        </div>
       </div>`;
   }
 
   function renderFocus() {
-    if (!state.orderedWorks.length) return;
-    state.focusIndex = ((state.focusIndex % state.orderedWorks.length) + state.orderedWorks.length) % state.orderedWorks.length;
-    const work = state.orderedWorks[state.focusIndex];
-    state.focusImageIndex = Math.min(state.focusImageIndex, work.images.length - 1);
-    els.focusMount.innerHTML = focusTemplate(work);
+    if (!state.focusPhotos.length) return;
+    state.focusIndex = ((state.focusIndex % state.focusPhotos.length) + state.focusPhotos.length) % state.focusPhotos.length;
+    els.focusMount.innerHTML = focusTemplate(state.focusPhotos[state.focusIndex]);
   }
 
   function moveFocus(delta) {
-    state.focusIndex = (state.focusIndex + delta + state.orderedWorks.length) % state.orderedWorks.length;
-    state.focusImageIndex = 0;
-    renderFocus();
-  }
-
-  function moveFocusImage(delta) {
-    const work = state.orderedWorks[state.focusIndex];
-    if (!work || work.images.length < 2) return;
-    state.focusImageIndex = (state.focusImageIndex + delta + work.images.length) % work.images.length;
+    if (!state.focusPhotos.length) return;
+    state.focusIndex = (state.focusIndex + delta + state.focusPhotos.length) % state.focusPhotos.length;
     renderFocus();
   }
 
   function setView(view) {
     if (!['gallery', 'focus', 'favorites'].includes(view)) return;
     state.view = view;
-    $$('.view').forEach(v => v.classList.toggle('is-active', v.id === `${view}View`));
-    $$('.nav-tab').forEach(b => b.classList.toggle('is-active', b.dataset.view === view));
-    els.shuffleButton.hidden = view === 'favorites';
+    document.body.classList.toggle('is-focus-mode', view === 'focus');
+    $('.view').forEach(v => v.classList.toggle('is-active', v.id === `${view}View`));
+    $('.nav-tab').forEach(b => b.classList.toggle('is-active', b.dataset.view === view));
+    els.shuffleButton.hidden = view === 'favorites' || view === 'focus';
     if (view === 'favorites') renderFavorites();
     if (view === 'focus') renderFocus();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: view === 'focus' ? 'auto' : 'smooth' });
   }
 
   function shuffleWorks() {
@@ -154,7 +160,7 @@
     }
     state.orderedWorks = arr;
     state.focusIndex = 0;
-    state.focusImageIndex = 0;
+    rebuildFocusPhotos();
     renderGallery();
     if (state.view === 'focus') renderFocus();
   }
@@ -253,9 +259,6 @@
         return;
       }
 
-      const focusBtn = e.target.closest('[data-focus]');
-      if (focusBtn) { moveFocus(focusBtn.dataset.focus === 'next' ? 1 : -1); return; }
-
       const card = e.target.closest('[data-work-id]');
       if (card) openViewerById(card.dataset.workId);
     });
@@ -295,8 +298,31 @@
 
     els.focusMount.addEventListener('click', e => {
       if (e.target.closest('a,button')) return;
-      if (e.target.closest('[data-focus-media]')) moveFocusImage(1);
+      const media = e.target.closest('[data-focus-media]');
+      if (!media || Date.now() < state.suppressFocusClickUntil) return;
+      const rect = media.getBoundingClientRect();
+      moveFocus(e.clientX < rect.left + rect.width / 2 ? -1 : 1);
     });
+
+    els.focusMount.addEventListener('touchstart', e => {
+      const media = e.target.closest('[data-focus-media]');
+      if (!media || e.touches.length !== 1) return;
+      state.focusTouchStartX = e.touches[0].clientX;
+      state.focusTouchStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    els.focusMount.addEventListener('touchend', e => {
+      if (state.focusTouchStartX == null || state.focusTouchStartY == null) return;
+      const touch = e.changedTouches[0];
+      const dx = (touch?.clientX ?? state.focusTouchStartX) - state.focusTouchStartX;
+      const dy = (touch?.clientY ?? state.focusTouchStartY) - state.focusTouchStartY;
+      state.focusTouchStartX = null;
+      state.focusTouchStartY = null;
+      if (Math.abs(dx) > 44 && Math.abs(dx) > Math.abs(dy) * 1.15) {
+        state.suppressFocusClickUntil = Date.now() + 350;
+        moveFocus(dx > 0 ? -1 : 1);
+      }
+    }, { passive: true });
 
     window.addEventListener('hashchange', () => {
       const id = location.hash.slice(1);
@@ -334,6 +360,7 @@
     state.data = await res.json();
     state.works = state.data.works;
     state.orderedWorks = [...state.works];
+    rebuildFocusPhotos();
 
     els.galleryStats.textContent = `${state.data.meta.workCount} works · ${state.data.meta.photoCount} photos`;
     els.periodText.textContent = `${state.data.meta.hashtag}  /  ${state.data.meta.period}`;
