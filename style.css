@@ -105,29 +105,32 @@ h1 { margin: 0; font-size: clamp(34px,5.2vw,78px); line-height: .98; letter-spac
 .focus-edge-hint-right { right: 8px; }
 .focus-media:hover .focus-edge-hint { opacity: .9; }
 
-/* Focus mode keeps the photo and metadata inside the current viewport. */
-body.is-focus-mode { overflow: hidden; }
+/* Focus mode: normal document flow is intentionally used on mobile Safari.
+   Only the image is height-limited, so the photo can never be clipped by browser chrome. */
+body.is-focus-mode { overflow-x: hidden; }
 body.is-focus-mode .hero, body.is-focus-mode footer { display: none; }
-body.is-focus-mode .site-header {
-  position: fixed;
-  inset: 0 0 auto 0;
-  width: 100%;
-  height: var(--header-h);
-}
+body.is-focus-mode .site-header { width: 100%; height: var(--header-h); }
 body.is-focus-mode .brand { display: flex; }
 body.is-focus-mode .icon-button { display: none !important; }
 body.is-focus-mode main {
-  position: fixed;
-  inset: var(--header-h) 0 0 0;
+  position: static;
   width: 100%;
   height: auto;
   margin: 0;
-  overflow: hidden;
+  overflow: visible;
 }
-body.is-focus-mode #focusView { height: 100%; }
-body.is-focus-mode #focusMount { min-height: 0; height: 100%; padding: clamp(8px,1.4vw,16px); }
-body.is-focus-mode .focus-shell { height: 100%; width: min(1120px,100%); }
-body.is-focus-mode .focus-card { height: 100%; display: grid; grid-template-rows: minmax(0,1fr) auto; }
+body.is-focus-mode #focusView { height: auto; padding-bottom: 0; }
+body.is-focus-mode #focusMount {
+  min-height: 0;
+  height: auto;
+  padding: clamp(8px,1.4vw,16px);
+}
+body.is-focus-mode .focus-shell { height: auto; width: min(1120px,100%); }
+body.is-focus-mode .focus-card {
+  height: auto;
+  display: grid;
+  grid-template-rows: minmax(0,1fr) auto;
+}
 body.is-focus-mode .focus-media { min-height: 0; height: auto; }
 
 /* Viewer */
@@ -170,11 +173,6 @@ footer p { margin: 0; }
   .work-nav { display: none; }
   .profile-name { font-size: 16px; }
   body.is-focus-mode .site-header { height: var(--header-h); }
-  body.is-focus-mode main {
-    inset: var(--header-h) 0 auto 0;
-    height: calc(var(--visual-viewport-h) - var(--header-h) - env(safe-area-inset-bottom) - 8px);
-    max-height: calc(var(--visual-viewport-h) - var(--header-h) - env(safe-area-inset-bottom) - 8px);
-  }
 }
 
 @media (max-width: 620px) {
@@ -191,17 +189,15 @@ footer p { margin: 0; }
   .section-heading { display: block; padding: 4px 4px 22px; }
   .section-note { margin-top: 10px; }
   body.is-focus-mode main {
-    position: fixed;
-    inset: var(--header-h) 0 auto 0;
+    position: static;
     width: 100%;
-    height: calc(var(--visual-viewport-h) - var(--header-h) - env(safe-area-inset-bottom) - 8px);
-    max-height: calc(var(--visual-viewport-h) - var(--header-h) - env(safe-area-inset-bottom) - 8px);
+    height: auto;
     min-height: 0;
-    overflow: hidden;
+    overflow: visible;
   }
   body.is-focus-mode #focusView,
   body.is-focus-mode #focusMount,
-  body.is-focus-mode .focus-shell { height: 100%; min-height: 0; }
+  body.is-focus-mode .focus-shell { height: auto; min-height: 0; }
   body.is-focus-mode #focusMount { padding: 0; }
   body.is-focus-mode .site-header {
     height: var(--header-h);
@@ -209,16 +205,16 @@ footer p { margin: 0; }
   }
   .focus-shell { width: 100%; }
   body.is-focus-mode .focus-card {
-    height: 100%;
+    height: auto;
     border-radius: 0;
     border-left: 0;
     border-right: 0;
     border-bottom: 0;
     box-shadow: none;
     display: grid;
-    grid-template-rows: auto minmax(0,1fr);
+    grid-template-rows: auto auto;
     grid-template-columns: minmax(0,1fr);
-    overflow: hidden;
+    overflow: visible;
   }
   body.is-focus-mode .focus-meta {
     grid-row: 1;
@@ -234,17 +230,21 @@ footer p { margin: 0; }
     grid-row: 2;
     grid-column: 1;
     min-height: 0;
-    height: 100%;
+    height: auto;
     width: 100%;
-    padding-bottom: 2px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 0;
   }
   body.is-focus-mode .focus-media img {
-    width: 100%;
-    height: 100%;
+    width: auto;
+    height: auto;
     max-width: 100%;
-    max-height: 100%;
+    max-height: calc(var(--visual-viewport-h) - var(--header-h) - 76px - env(safe-area-inset-bottom) - 12px);
     object-fit: contain;
-    object-position: center center;
+    object-position: center top;
+    margin: 0 auto;
   }
   .focus-profile { flex: 1 1 auto; min-width: 0; }
   .focus-name { font-size: 14px; }
