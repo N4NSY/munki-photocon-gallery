@@ -1,6 +1,9 @@
 (() => {
   'use strict';
 
+  // Safariなどが前回のスクロール位置を復元して、初期表示が少し下がるのを防ぐ。
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+
   const state = {
     data: null,
     works: [],
@@ -142,14 +145,19 @@
 
   function setView(view) {
     if (!['gallery', 'focus', 'favorites'].includes(view)) return;
+
+    // どの位置から切り替えても、固定表示の1枚ずつモードが上端から始まるようにする。
+    window.scrollTo(0, 0);
+
     state.view = view;
     document.body.classList.toggle('is-focus-mode', view === 'focus');
-    $$('.view').forEach(v => v.classList.toggle('is-active', v.id === `${view}View`));
-    $$('.nav-tab').forEach(b => b.classList.toggle('is-active', b.dataset.view === view));
+    $('.view').forEach(v => v.classList.toggle('is-active', v.id === `${view}View`));
+    $('.nav-tab').forEach(b => b.classList.toggle('is-active', b.dataset.view === view));
     els.shuffleButton.hidden = view === 'favorites' || view === 'focus';
     if (view === 'favorites') renderFavorites();
     if (view === 'focus') renderFocus();
-    window.scrollTo({ top: 0, behavior: view === 'focus' ? 'auto' : 'smooth' });
+
+    requestAnimationFrame(() => window.scrollTo(0, 0));
   }
 
   function shuffleWorks() {
@@ -368,6 +376,11 @@
     renderGallery();
     renderFocus();
     bindEvents();
+
+    // 初回ロード時は常にページ最上部から。Safariのスクロール位置復元対策。
+    window.scrollTo(0, 0);
+    requestAnimationFrame(() => window.scrollTo(0, 0));
+    setTimeout(() => window.scrollTo(0, 0), 0);
 
     const id = location.hash.slice(1);
     if (id && state.works.some(w => w.id === id)) openViewerById(id, false);
