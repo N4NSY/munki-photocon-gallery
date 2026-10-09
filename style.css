@@ -192,6 +192,31 @@ footer p { margin: 0; }
 .notice-contact:hover { background: rgba(255,255,255,.05); }
 
 
+
+@media (min-width: 901px) {
+  .masonry {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    grid-auto-rows: 8px;
+    grid-auto-flow: dense;
+    column-width: auto;
+    column-gap: 0;
+    gap: 12px;
+    align-items: start;
+  }
+
+  .masonry .work-card {
+    display: block;
+    width: 100%;
+    margin: 0;
+    break-inside: auto;
+  }
+
+  .masonry .work-card.is-landscape {
+    grid-column: span 2;
+  }
+}
+
 @media (min-width: 901px) {
   body.is-focus-mode { overflow: hidden; }
 
