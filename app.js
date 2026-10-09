@@ -30,6 +30,28 @@
     document.documentElement.style.setProperty('--visual-viewport-h', `${Math.round(h)}px`);
   }
 
+  function viewFromUrl() {
+    const view = new URL(location.href).searchParams.get('view');
+    return ['focus', 'favorites'].includes(view) ? view : 'gallery';
+  }
+
+  function buildUrl(view = state.view, workId = null) {
+    const url = new URL(location.href);
+    if (view === 'gallery') url.searchParams.delete('view');
+    else url.searchParams.set('view', view);
+    url.hash = workId ? `#${workId}` : '';
+    return `${url.pathname}${url.search}${url.hash}`;
+  }
+
+  function saveCurrentScrollInHistory() {
+    const current = history.state || {};
+    history.replaceState(
+      { ...current, view: current.view || state.view, scrollY: window.scrollY },
+      '',
+      location.href
+    );
+  }
+
   function loadFavorites() {
     try {
       const raw = JSON.parse(localStorage.getItem(storageKey) || '[]');
@@ -148,14 +170,15 @@
     renderFocus();
   }
 
-  function setView(view) {
+  function setView(view, { historyMode = 'push', scrollToTop = true } = {}) {
     if (!['gallery', 'focus', 'favorites'].includes(view)) return;
 
-    // iOS Safariの実際に見えている高さを先に反映してから表示を切り替える。
     syncVisualViewport();
 
-    // どの位置から切り替えても、固定表示の1枚ずつモードが上端から始まるようにする。
-    window.scrollTo(0, 0);
+    const previousView = state.view;
+    const changingView = previousView !== view;
+
+    if (historyMode === 'push' && changingView) saveCurrentScrollInHistory();
 
     state.view = view;
     document.body.classList.toggle('is-focus-mode', view === 'focus');
@@ -165,7 +188,24 @@
     if (view === 'favorites') renderFavorites();
     if (view === 'focus') renderFocus();
 
-    requestAnimationFrame(() => window.scrollTo(0, 0));
+    if (historyMode === 'push' && changingView) {
+      history.pushState(
+        { view, viewerId: null, openedFromApp: true, scrollY: 0 },
+        '',
+        buildUrl(view)
+      );
+    } else if (historyMode === 'replace') {
+      history.replaceState(
+        { view, viewerId: null, openedFromApp: false, scrollY: scrollToTop ? 0 : window.scrollY },
+        '',
+        buildUrl(view)
+      );
+    }
+
+    if (scrollToTop) {
+      window.scrollTo(0, 0);
+      requestAnimationFrame(() => window.scrollTo(0, 0));
+    }
   }
 
   function shuffleWorks() {
@@ -181,27 +221,56 @@
     if (state.view === 'focus') renderFocus();
   }
 
-  function openViewerById(id, pushHash = true) {
+  function openViewerById(id, historyMode = 'push') {
     const idx = state.orderedWorks.findIndex(w => w.id === String(id));
     if (idx < 0) return;
+
+    if (historyMode === 'push') saveCurrentScrollInHistory();
+
     state.viewerIndex = idx;
     state.viewerImageIndex = 0;
-    renderViewer();
+    renderViewer(false);
     els.viewer.hidden = false;
     els.viewer.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
-    if (pushHash) history.replaceState(null, '', `#${id}`);
+
+    if (historyMode === 'push') {
+      history.pushState(
+        { view: state.view, viewerId: String(id), openedFromApp: true, scrollY: 0 },
+        '',
+        buildUrl(state.view, id)
+      );
+    } else if (historyMode === 'replace') {
+      history.replaceState(
+        { view: state.view, viewerId: String(id), openedFromApp: false, scrollY: 0 },
+        '',
+        buildUrl(state.view, id)
+      );
+    }
   }
 
-  function closeViewer(clearHash = true) {
+  function hideViewer() {
     els.viewer.hidden = true;
     els.viewer.setAttribute('aria-hidden', 'true');
     document.body.style.overflow = '';
     state.viewerIndex = -1;
-    if (clearHash && location.hash) history.replaceState(null, '', location.pathname + location.search);
   }
 
-  function renderViewer() {
+  function closeViewer(useHistory = true) {
+    if (useHistory && history.state?.viewerId && history.state?.openedFromApp) {
+      history.back();
+      return;
+    }
+
+    hideViewer();
+    history.replaceState(
+      { view: state.view, viewerId: null, openedFromApp: false, scrollY: window.scrollY },
+      '',
+      buildUrl(state.view)
+    );
+  }
+
+  function renderViewer(updateHistory = true) {
     const work = state.orderedWorks[state.viewerIndex];
     if (!work) return;
     state.viewerImageIndex = ((state.viewerImageIndex % work.images.length) + work.images.length) % work.images.length;
@@ -217,7 +286,20 @@
     els.viewerImagePrev.hidden = work.images.length < 2;
     els.viewerImageNext.hidden = work.images.length < 2;
     updateViewerFavorite();
-    history.replaceState(null, '', `#${work.id}`);
+
+    if (updateHistory) {
+      const current = history.state || {};
+      history.replaceState(
+        {
+          ...current,
+          view: state.view,
+          viewerId: work.id,
+          openedFromApp: current.openedFromApp ?? true
+        },
+        '',
+        buildUrl(state.view, work.id)
+      );
+    }
   }
 
   function updateViewerFavorite() {
@@ -340,10 +422,18 @@
       }
     }, { passive: true });
 
-    window.addEventListener('hashchange', () => {
+    window.addEventListener('popstate', e => {
+      const view = viewFromUrl();
+      setView(view, { historyMode: 'none', scrollToTop: false });
+
       const id = location.hash.slice(1);
-      if (id && state.works.some(w => w.id === id)) openViewerById(id, false);
-      else if (!id && !els.viewer.hidden) closeViewer(false);
+      if (id && state.works.some(w => w.id === id)) {
+        openViewerById(id, 'none');
+      } else {
+        hideViewer();
+        const y = Number.isFinite(e.state?.scrollY) ? e.state.scrollY : 0;
+        requestAnimationFrame(() => window.scrollTo(0, y));
+      }
     });
 
     window.addEventListener('resize', syncVisualViewport, { passive: true });
@@ -396,8 +486,25 @@
     requestAnimationFrame(() => window.scrollTo(0, 0));
     setTimeout(() => window.scrollTo(0, 0), 0);
 
+    const initialView = viewFromUrl();
     const id = location.hash.slice(1);
-    if (id && state.works.some(w => w.id === id)) openViewerById(id, false);
+
+    setView(initialView, { historyMode: 'none', scrollToTop: true });
+
+    if (id && state.works.some(w => w.id === id)) {
+      history.replaceState(
+        { view: initialView, viewerId: id, openedFromApp: false, scrollY: 0 },
+        '',
+        buildUrl(initialView, id)
+      );
+      openViewerById(id, 'none');
+    } else {
+      history.replaceState(
+        { view: initialView, viewerId: null, openedFromApp: false, scrollY: 0 },
+        '',
+        buildUrl(initialView)
+      );
+    }
   }
 
   init().catch(err => {
