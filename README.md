@@ -15,6 +15,7 @@ Pinterest風のMasonryレイアウトで応募作品を一覧表示します。
 
 - 1投稿を1作品として表示
 - 複数画像投稿は1つの作品としてまとめて表示
+- 一覧では長辺800px以下のWebPサムネイルを使用
 - 作品を開くと投稿者名・Xユーザー名・元投稿リンクを確認可能
 - 縦横比を維持し、画像をクロップせず表示
 
@@ -28,6 +29,7 @@ Pinterest風のMasonryレイアウトで応募作品を一覧表示します。
 - シャッフル表示
 - 投稿者名・Xユーザー名・元投稿リンクを表示
 - 同一投稿に複数画像がある場合は「投稿内 1/4」のように表示
+- 通信節約モードや低速回線でない場合、前後1枚だけ先読み
 
 ### 保存済み
 
@@ -51,15 +53,21 @@ Pinterest風のMasonryレイアウトで応募作品を一覧表示します。
 
 ## 表示仕様
 
-掲載画像そのものはリサイズ・クロップせず、CSSで表示サイズのみ調整しています。
+詳細表示と「1枚ずつ」では元画像をそのまま使用し、CSSの `object-fit: contain` を基本として縦横比と構図を維持します。
 
-```css
-object-fit: contain;
-```
-
-を基本とし、作品の縦横比と構図を維持します。
+一覧表示だけは通信量削減のため、`thumbs/` に生成したWebPサムネイルを利用します。元画像ファイルは変更しません。
 
 PC・スマートフォンの両方に対応し、iOS Safariでは `VisualViewport` を利用してブラウザUIを含む実際の表示領域に合わせて調整しています。
+
+## 自動生成アセット
+
+`scripts/generate_assets.py` と GitHub Actions により、以下を自動生成します。
+
+- `thumbs/*.webp`: 一覧用サムネイル
+- `assets/ogp.jpg`: X / Discord等のリンクプレビュー用画像
+- `data/gallery.json` 内の `thumb` / `thumbWidth` / `thumbHeight`
+
+`images/` または生成スクリプトが更新されると、`.github/workflows/generate-assets.yml` が再生成して `main` にコミットします。
 
 ## 技術構成
 
@@ -68,13 +76,26 @@ PC・スマートフォンの両方に対応し、iOS Safariでは `VisualViewpo
 ```text
 munki-photocon-gallery/
 ├─ index.html
+├─ notice.html
+├─ favicon.svg
 ├─ style.css
 ├─ app.js
 ├─ .nojekyll
 ├─ README.md
 ├─ NOTICE.md
+├─ .github/
+│  └─ workflows/
+│     └─ generate-assets.yml
+├─ scripts/
+│  └─ generate_assets.py
+├─ assets/
+│  └─ ogp.jpg
 ├─ data/
 │  └─ gallery.json
+├─ thumbs/
+│  ├─ 0001.webp
+│  ├─ ...
+│  └─ 0505.webp
 └─ images/
    ├─ 0001.jpg
    ├─ ...
@@ -85,6 +106,8 @@ munki-photocon-gallery/
 - CSS
 - Vanilla JavaScript
 - GitHub Pages
+- GitHub Actions
+- Pillow（アセット生成時のみ）
 
 ## データ
 
@@ -98,59 +121,42 @@ munki-photocon-gallery/
 - プロフィール表示名
 - 元投稿URL
 - 投稿日時
-- 画像ファイル名
-- 元画像サイズ
+- 元画像ファイル名・サイズ
+- サムネイルファイル名・サイズ
 - 投稿内画像番号
 
 表示名・ユーザー名などは収集時点の情報です。X側で変更された場合、サイト内表示と現在のプロフィールが一致しない場合があります。
 
-元投稿リンクはユーザー名変更の影響を受けにくい以下の形式を使用しています。
-
-```text
-https://x.com/i/web/status/<tweet_id>
-```
+元投稿リンクはユーザー名変更の影響を受けにくい `https://x.com/i/web/status/<tweet_id>` 形式を使用しています。
 
 ## ローカル確認
 
 `index.html` を直接開くと、ブラウザの制約により `fetch()` が失敗する場合があります。
 
-Pythonが利用できる場合はRepository直下で:
-
 ```bash
 python -m http.server 8000
 ```
 
-その後:
-
-```text
-http://localhost:8000/
-```
-
-を開いてください。
+その後 `http://localhost:8000/` を開いてください。
 
 ## GitHub Pages
 
-このRepositoryは `main` ブランチのルートをGitHub Pagesとして公開する構成です。
-
-設定:
-
-```text
-Settings
-└─ Pages
-   └─ Build and deployment
-      ├─ Source: Deploy from a branch
-      ├─ Branch: main
-      └─ Folder: / (root)
-```
+`main` ブランチの `/ (root)` をGitHub Pagesとして公開します。
 
 ## 掲載・権利について
 
 このサイトは `#むんきフォトコン` に公開投稿された応募作品を見返しやすくする目的で作成しています。
 
 - 各画像・作品の権利は各投稿者・権利者に帰属します
-- このRepositoryへの掲載は、第三者への転載・再利用・再配布を許諾するものではありません
+- Repositoryへの掲載は、第三者への転載・再利用・再配布を許諾するものではありません
 - 公開Like数・ランキング・コメント機能はありません
 - 元のX投稿への導線を設けています
 - 掲載取り下げの希望があった場合は対応します
 
-詳細は [NOTICE.md](NOTICE.md) を参照してください。
+詳細は [NOTICE.md](NOTICE.md) および公開サイトの [掲載について・削除依頼](https://n4nsy.github.io/munki-photocon-gallery/notice.html) を参照してください。
+
+## License
+
+このRepositoryには現在、OSSライセンスを付与していません。
+
+特に `images/`、`thumbs/`、`data/` および応募作品由来のアセットは、将来コード部分にライセンスを付与する場合でも自動的にその対象にはしません。
