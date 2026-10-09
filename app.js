@@ -52,6 +52,47 @@
     );
   }
 
+  function canPreload() {
+    const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    if (connection?.saveData) return false;
+    return !['slow-2g', '2g'].includes(connection?.effectiveType);
+  }
+
+  function preloadImage(src) {
+    if (!src || !canPreload()) return;
+    const img = new Image();
+    img.decoding = 'async';
+    img.src = src;
+  }
+
+  function preloadFocusNeighbors() {
+    const count = state.focusPhotos.length;
+    if (count < 2) return;
+    [-1, 1].forEach(delta => {
+      const index = (state.focusIndex + delta + count) % count;
+      preloadImage(state.focusPhotos[index]?.image?.src);
+    });
+  }
+
+  function preloadViewerNeighbors() {
+    const work = state.orderedWorks[state.viewerIndex];
+    if (!work) return;
+
+    if (work.images.length > 1) {
+      [-1, 1].forEach(delta => {
+        const index = (state.viewerImageIndex + delta + work.images.length) % work.images.length;
+        preloadImage(work.images[index]?.src);
+      });
+    }
+
+    if (state.orderedWorks.length > 1) {
+      [-1, 1].forEach(delta => {
+        const index = (state.viewerIndex + delta + state.orderedWorks.length) % state.orderedWorks.length;
+        preloadImage(state.orderedWorks[index]?.images?.[0]?.src);
+      });
+    }
+  }
+
   function loadFavorites() {
     try {
       const raw = JSON.parse(localStorage.getItem(storageKey) || '[]');
@@ -98,7 +139,7 @@
     const saved = isSaved(work.id);
     return `
       <article class="work-card" data-work-id="${work.id}" tabindex="0" aria-label="${escapeHtml(work.displayName)}さんの作品を開く">
-        <img src="${img.thumb}" width="${img.webWidth}" height="${img.webHeight}" loading="lazy" decoding="async" alt="${escapeHtml(work.displayName)}さんの作品">
+        <img src="${img.thumb}" width="${img.thumbWidth || img.webWidth}" height="${img.thumbHeight || img.webHeight}" loading="lazy" decoding="async" alt="${escapeHtml(work.displayName)}さんの作品">
         ${multi}
         <button class="favorite-card ${saved ? 'is-saved' : ''}" data-favorite-id="${work.id}" type="button" aria-label="${saved ? '保存から外す' : 'この作品を保存'}">${saved ? '♥' : '♡'}</button>
         <div class="card-overlay">
@@ -162,6 +203,7 @@
     if (!state.focusPhotos.length) return;
     state.focusIndex = ((state.focusIndex % state.focusPhotos.length) + state.focusPhotos.length) % state.focusPhotos.length;
     els.focusMount.innerHTML = focusTemplate(state.focusPhotos[state.focusIndex]);
+    preloadFocusNeighbors();
   }
 
   function moveFocus(delta) {
@@ -286,6 +328,7 @@
     els.viewerImagePrev.hidden = work.images.length < 2;
     els.viewerImageNext.hidden = work.images.length < 2;
     updateViewerFavorite();
+    preloadViewerNeighbors();
 
     if (updateHistory) {
       const current = history.state || {};
@@ -325,17 +368,6 @@
 
   function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
-  }
-
-  function handleCardClick(e) {
-    const favorite = e.target.closest('[data-favorite-id]');
-    if (favorite) {
-      e.preventDefault(); e.stopPropagation();
-      toggleFavorite(favorite.dataset.favoriteId);
-      return;
-    }
-    const card = e.target.closest('[data-work-id]');
-    if (card) openViewerById(card.dataset.workId);
   }
 
   function bindEvents() {
