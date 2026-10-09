@@ -137,8 +137,10 @@
     const img = work.images[0];
     const multi = work.images.length > 1 ? `<span class="multi-badge">${work.images.length}枚</span>` : '';
     const saved = isSaved(work.id);
+    const ratio = Number(img.webWidth || img.width) / Number(img.webHeight || img.height);
+    const layoutClass = ratio >= 1.25 ? ' is-landscape' : ratio <= 0.8 ? ' is-portrait' : '';
     return `
-      <article class="work-card" data-work-id="${work.id}" tabindex="0" aria-label="${escapeHtml(work.displayName)}さんの作品を開く">
+      <article class="work-card${layoutClass}" data-work-id="${work.id}" tabindex="0" aria-label="${escapeHtml(work.displayName)}さんの作品を開く">
         <img src="${img.thumb}" width="${img.thumbWidth || img.webWidth}" height="${img.thumbHeight || img.webHeight}" loading="lazy" decoding="async" alt="${escapeHtml(work.displayName)}さんの作品">
         ${multi}
         <button class="favorite-card ${saved ? 'is-saved' : ''}" data-favorite-id="${work.id}" type="button" aria-label="${saved ? '保存から外す' : 'この作品を保存'}">${saved ? '♥' : '♡'}</button>
@@ -148,14 +150,41 @@
       </article>`;
   }
 
+  function layoutMasonry(root) {
+    if (!root || !window.matchMedia('(min-width: 901px)').matches) return;
+
+    const styles = getComputedStyle(root);
+    const rowHeight = parseFloat(styles.gridAutoRows) || 8;
+    const rowGap = parseFloat(styles.rowGap) || 12;
+
+    root.querySelectorAll('.work-card').forEach(card => {
+      card.style.gridRowEnd = '';
+      const height = card.getBoundingClientRect().height;
+      const span = Math.max(1, Math.ceil((height + rowGap) / (rowHeight + rowGap)));
+      card.style.gridRowEnd = `span ${span}`;
+    });
+  }
+
+  function scheduleMasonry(root) {
+    if (!root) return;
+    requestAnimationFrame(() => {
+      layoutMasonry(root);
+      root.querySelectorAll('img').forEach(img => {
+        if (!img.complete) img.addEventListener('load', () => layoutMasonry(root), { once: true });
+      });
+    });
+  }
+
   function renderGallery() {
     els.galleryGrid.innerHTML = state.orderedWorks.map(cardTemplate).join('');
+    scheduleMasonry(els.galleryGrid);
   }
 
   function renderFavorites() {
     const favorites = state.orderedWorks.filter(w => isSaved(w.id));
     els.favoritesGrid.innerHTML = favorites.map(cardTemplate).join('');
     els.favoritesEmpty.hidden = favorites.length !== 0;
+    scheduleMasonry(els.favoritesGrid);
   }
 
   function rebuildFocusPhotos() {
@@ -467,6 +496,15 @@
         requestAnimationFrame(() => window.scrollTo(0, y));
       }
     });
+
+    let masonryResizeTimer = 0;
+    window.addEventListener('resize', () => {
+      clearTimeout(masonryResizeTimer);
+      masonryResizeTimer = setTimeout(() => {
+        scheduleMasonry(els.galleryGrid);
+        scheduleMasonry(els.favoritesGrid);
+      }, 100);
+    }, { passive: true });
 
     window.addEventListener('resize', syncVisualViewport, { passive: true });
     window.addEventListener('orientationchange', () => setTimeout(syncVisualViewport, 50), { passive: true });
