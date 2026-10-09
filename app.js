@@ -150,29 +150,35 @@
       </article>`;
   }
 
+  const masonryFrames = new WeakMap();
+
   function layoutMasonry(root) {
     if (!root || !window.matchMedia('(min-width: 901px)').matches) return;
 
     const styles = getComputedStyle(root);
     const rowHeight = parseFloat(styles.gridAutoRows) || 8;
     const rowGap = parseFloat(styles.rowGap) || 12;
+    const cards = [...root.querySelectorAll('.work-card')];
 
-    root.querySelectorAll('.work-card').forEach(card => {
-      card.style.gridRowEnd = '';
+    // Read all heights first, then write all spans.
+    // Mixing reads/writes per card forces hundreds of synchronous reflows.
+    const spans = cards.map(card => {
       const height = card.getBoundingClientRect().height;
-      const span = Math.max(1, Math.ceil((height + rowGap) / (rowHeight + rowGap)));
-      card.style.gridRowEnd = `span ${span}`;
+      return Math.max(1, Math.ceil((height + rowGap) / (rowHeight + rowGap)));
+    });
+
+    cards.forEach((card, index) => {
+      card.style.gridRowEnd = `span ${spans[index]}`;
     });
   }
 
   function scheduleMasonry(root) {
-    if (!root) return;
-    requestAnimationFrame(() => {
+    if (!root || masonryFrames.has(root)) return;
+    const frame = requestAnimationFrame(() => {
+      masonryFrames.delete(root);
       layoutMasonry(root);
-      root.querySelectorAll('img').forEach(img => {
-        if (!img.complete) img.addEventListener('load', () => layoutMasonry(root), { once: true });
-      });
     });
+    masonryFrames.set(root, frame);
   }
 
   function renderGallery() {
