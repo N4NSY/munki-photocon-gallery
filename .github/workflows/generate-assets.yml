@@ -7,11 +7,14 @@ on:
     paths:
       - "images/**"
       - "scripts/generate_assets.py"
-      - ".github/workflows/generate-assets.yml"
   workflow_dispatch:
 
 permissions:
   contents: write
+
+concurrency:
+  group: gallery-assets
+  cancel-in-progress: true
 
 jobs:
   generate:
@@ -46,4 +49,5 @@ jobs:
             exit 0
           fi
           git commit -m "Generate optimized gallery assets"
+          git pull --rebase origin main
           git push
